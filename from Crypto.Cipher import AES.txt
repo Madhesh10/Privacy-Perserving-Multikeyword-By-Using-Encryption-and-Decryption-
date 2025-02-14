@@ -1,0 +1,50 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import base64
+
+# AES Encryption Class
+class AESCipher:
+    def __init__(self, key):
+        self.key = key[:16].encode('utf-8')  # Ensure 16-byte key
+
+    def encrypt(self, raw):
+        cipher = AES.new(self.key, AES.MODE_CBC)
+        ct_bytes = cipher.encrypt(pad(raw.encode('utf-8'), AES.block_size))
+        return base64.b64encode(cipher.iv + ct_bytes).decode('utf-8')
+
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return unpad(cipher.decrypt(enc[AES.block_size:]), AES.block_size).decode('utf-8')
+
+# Secure Data Storage and Search
+class SecureSearch:
+    def __init__(self, key):
+        self.cipher = AESCipher(key)
+        self.encrypted_data = {}
+
+    def add_document(self, doc_id, content):
+        keywords = content.split()
+        encrypted_keywords = [self.cipher.encrypt(word) for word in keywords]
+        self.encrypted_data[doc_id] = encrypted_keywords
+
+    def search(self, query):
+        encrypted_query = self.cipher.encrypt(query)
+        results = [doc_id for doc_id, keywords in self.encrypted_data.items() if encrypted_query in keywords]
+        return results
+
+# Example Usage
+if __name__ == "__main__":
+    key = "securesearchkey"  # 16-byte key
+    search_system = SecureSearch(key)
+    
+    # Adding encrypted documents
+    search_system.add_document("doc1", "privacy encryption security")
+    search_system.add_document("doc2", "data protection compliance")
+    
+    # Searching for encrypted keywords
+    query = "security"
+    print("Searching for:", query)
+    results = search_system.search(query)
+    print("Documents found:", results)
